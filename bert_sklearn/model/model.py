@@ -78,14 +78,14 @@ class BertPlusMLP(BertPreTrainedModel):
                  oversampler=None):
 
         if oversampler is not None:
-            assert oversampler in ["smote", "adasyn", "borderlinesmote", "kmeanssmote", "svmsmote"]
+            assert oversampler.lower() in ["smote", "adasyn", "borderlinesmote", "kmeanssmote", "svmsmote"]
 
         super(BertPlusMLP, self).__init__(config)
         self.model_type = model_type
         self.num_labels = num_labels
         self.num_mlp_layers = num_mlp_layers
         self.num_mlp_hiddens = num_mlp_hiddens
-        self.oversampler = self.__oversampler_for_str(oversampler)
+        self.oversampler = self.__oversampler_for_str(oversampler.lower())
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.bert = BertModel(config)
@@ -116,6 +116,7 @@ class BertPlusMLP(BertPreTrainedModel):
             output, labels = self.oversampler.fit_resample(output.detach().numpy(), labels.detach().numpy())
             output = torch.from_numpy(output).to(input_ids.device)
             labels = torch.from_numpy(labels).to(input_ids.device)
+        print(labels)
 
         output = self.mlp(output)
 
