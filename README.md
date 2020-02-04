@@ -2,7 +2,7 @@
 
 
  A scikit-learn wrapper to finetune [Google's BERT](https://github.com/google-research/bert) model for text and token sequence tasks based on the [huggingface pytorch](https://github.com/huggingface/pytorch-pretrained-BERT) port.
- 
+
 * Includes configurable MLP as final classifier/regressor for text and text pair tasks
 * Includes token sequence classifier for NER, PoS, and chunking tasks
 * Includes  [**`SciBERT`**](https://github.com/allenai/scibert) and [**`BioBERT`**](https://github.com/dmis-lab/biobert) pretrained models for scientific  and biomedical domains.
@@ -73,6 +73,7 @@ model.max_seq_length = 196
 model.epochs = 4
 model.learning_rate = 4e-5
 model.gradient_accumulation_steps = 4
+model.oversampler = "SMOTE"
 
 # finetune
 model.fit(X_train, y_train)
@@ -91,12 +92,12 @@ from sklearn.model_selection import GridSearchCV
 params = {'epochs':[3, 4], 'learning_rate':[2e-5, 3e-5, 5e-5]}
 
 # wrap classifier in GridSearchCV
-clf = GridSearchCV(BertClassifier(validation_fraction=0), 
+clf = GridSearchCV(BertClassifier(validation_fraction=0),
                     params,
                     scoring='accuracy',
                     verbose=True)
 
-# fit gridsearch 
+# fit gridsearch
 clf.fit(X_train ,y_train)
 ```
 See [demo_tuning_hyperparameters](https://github.com/charles9n/bert-sklearn/blob/master/demo_tuning_hyperparams.ipynb) notebook.
@@ -106,7 +107,7 @@ The train and dev data sets from the [GLUE(Generalized Language Understanding Ev
 
 |    | MNLI(m/mm)| QQP   | QNLI | SST-2| CoLA | STS-B | MRPC | RTE |
 | - | - | - | - | - |- | - | - | - |
-|BERT base(leaderboard) |84.6/83.4  | 89.2 | 90.1 | 93.5 | 52.1 | 87.1  | 84.8 | 66.4 | 
+|BERT base(leaderboard) |84.6/83.4  | 89.2 | 90.1 | 93.5 | 52.1 | 87.1  | 84.8 | 66.4 |
 | bert-sklearn  |83.7/83.9| 90.2 |88.6 |92.32 |58.1| 89.7 |86.8 | 64.6 |
 
 Individual runs can be found can be found [here](https://github.com/charles9n/bert-sklearn/tree/master/glue_examples).
