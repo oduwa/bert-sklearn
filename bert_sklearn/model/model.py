@@ -135,8 +135,8 @@ class BertPlusMLP(BertPreTrainedModel):
             if minority_count <= self.k_neighbors or minority_count <= self.m_neighbors:
                 if len(np.where(labels == 1)[0]) > 0:
                     minority_index = np.where(labels == 1)[0][0]
-                    output = np.concatenate([output, np.tile(output[minority_index], (self.k_neighbors + 3, 1))], axis=0)
-                    labels = np.concatenate([labels, [labels[minority_index]] * (self.k_neighbors + 3)], axis=0)
+                    output = np.concatenate([output, np.tile(output[minority_index], (self.k_neighbors + 5, 1))], axis=0)
+                    labels = np.concatenate([labels, [labels[minority_index]] * (self.k_neighbors + 5)], axis=0)
                 else:
                     can_oversample = False
 
