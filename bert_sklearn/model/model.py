@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE, KMeansSMOTE, SVMSMOTE
 
@@ -68,6 +69,13 @@ class BertPlusMLP(BertPreTrainedModel):
     oversampler : str
         the algorithm to use to oversample examples of the minority class for unbalanced datasets.
         Must be one of "SMOTE", "ADASYN", "BorderlineSmote", "KMeansSMOTE", "SVMSMOTE", with case not important.
+
+    k_neighbors : int
+             number of nearest neighbours to used to construct synthetic samples
+
+    m_neighbors : int
+        number of nearest neighbours to used to construct synthetic samples.
+        Only used if oversampler_str == "BorderlineSMOTE" || SVMSMOTE
     """
 
     def __init__(self, config,
@@ -75,7 +83,9 @@ class BertPlusMLP(BertPreTrainedModel):
                  num_labels=2,
                  num_mlp_layers=2,
                  num_mlp_hiddens=500,
-                 oversampler=None):
+                 oversampler=None,
+                 k_neighbors=2,
+                 m_neighbors=3):
 
         if oversampler is not None:
             assert oversampler.lower() in ["smote", "adasyn", "borderlinesmote", "kmeanssmote", "svmsmote"]
@@ -85,7 +95,9 @@ class BertPlusMLP(BertPreTrainedModel):
         self.num_labels = num_labels
         self.num_mlp_layers = num_mlp_layers
         self.num_mlp_hiddens = num_mlp_hiddens
-        self.oversampler = self.__oversampler_for_str(oversampler.lower())
+        self.oversampler = self.__oversampler_for_str(oversampler.lower(), k_neighbors, m_neighbors)
+        self.k_neighbors = k_neighbors
+        self.m_neighbors = m_neighbors
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.bert = BertModel(config)
@@ -113,10 +125,25 @@ class BertPlusMLP(BertPreTrainedModel):
             output = self.dropout(output)
 
         if is_train and self.oversampler:
-            output, labels = self.oversampler.fit_resample(output.detach().numpy(), labels.detach().numpy())
+            output, labels = output.detach().numpy(), labels.detach().numpy()
+
+            # Count occurences of minority class and check if its too low for nearest neighbour oversampling.
+            # If it is too low, duplicate a minority class example.
+            can_oversample = True
+            minority_class = 1
+            minority_count = (labels == minority_class).sum()
+            if minority_count <= self.k_neighbors or minority_count <= self.m_neighbors:
+                if len(np.where(labels == 1)[0]) > 0:
+                    minority_index = np.where(labels == 1)[0][0]
+                    output = np.concatenate([output, np.tile(output[minority_index], (self.k_neighbors + 3, 1))], axis=0)
+                    labels = np.concatenate([labels, [labels[minority_index]] * (self.k_neighbors + 3)], axis=0)
+                else:
+                    can_oversample = False
+
+            if can_oversample:
+                output, labels = self.oversampler.fit_resample(output, labels)
             output = torch.from_numpy(output).to(input_ids.device)
             labels = torch.from_numpy(labels).to(input_ids.device)
-        print(labels)
 
         output = self.mlp(output)
 
@@ -135,7 +162,7 @@ class BertPlusMLP(BertPreTrainedModel):
         else:
             return output
 
-    def __oversampler_for_str(self, oversampler_str, k_neighbors=5, m_neighbors=10):
+    def __oversampler_for_str(self, oversampler_str, k_neighbors=2, m_neighbors=3):
         """
         Helper method for instantaiating an oversampler from a specified string.
 

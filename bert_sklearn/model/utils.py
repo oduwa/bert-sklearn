@@ -47,7 +47,9 @@ def get_model(bert_model='bert-base-uncased',
               num_mlp_hiddens=500,
               state_dict=None,
               local_rank=-1,
-              oversampler=None):
+              oversampler=None,
+              k_neighbors=2,
+              m_neighbors=3):
     """
     Get a BertPlusMLP model.
 
@@ -92,7 +94,8 @@ def get_model(bert_model='bert-base-uncased',
                                             model_type=model_type,
                                             num_mlp_hiddens=num_mlp_hiddens,
                                             num_mlp_layers=num_mlp_layers,
-                                            oversampler=oversampler)
+                                            oversampler=oversampler,
+                                            k_neighbors=k_neighbors, m_neighbors=m_neighbors)
     else:
         # Load from pre-trained model archive
         print("Loading %s model..."%(bert_model))
@@ -103,6 +106,7 @@ def get_model(bert_model='bert-base-uncased',
                                             model_type=model_type,
                                             num_mlp_hiddens=num_mlp_hiddens,
                                             num_mlp_layers=num_mlp_layers,
-                                            oversampler=oversampler)
+                                            oversampler=oversampler,
+                                            k_neighbors=k_neighbors, m_neighbors=m_neighbors)
 
     return model

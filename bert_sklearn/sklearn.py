@@ -148,6 +148,11 @@ class BaseBertEstimator(BaseEstimator):
     oversampler : str
         the algorithm to use to oversample examples of the minority class for unbalanced datasets.
         Must be one of "SMOTE", "ADASYN", "BorderlineSmote", "KMeansSMOTE", "SVMSMOTE", with case not important.
+    k_neighbors : int
+             number of nearest neighbours to used to construct synthetic samples
+    m_neighbors : int
+        number of nearest neighbours to used to construct synthetic samples.
+        Only used if oversampler == "BorderlineSMOTE" || SVMSMOTE
     """
     def __init__(self, bert_model='bert-base-uncased',
                  bert_config_json=None, bert_vocab=None,
@@ -158,7 +163,7 @@ class BaseBertEstimator(BaseEstimator):
                  gradient_accumulation_steps=1, fp16=False, loss_scale=0,
                  local_rank=-1, use_cuda=True, random_state=42,
                  validation_fraction=0.1, logfile='bert_sklearn.log',
-                 ignore_label=None, oversampler=None):
+                 ignore_label=None, oversampler=None, k_neighbors=2, m_neighbors=3):
 
         self.id2label, self.label2id = {}, {}
         self.input_text_pairs = None
@@ -190,6 +195,8 @@ class BaseBertEstimator(BaseEstimator):
         self.majority_label = None
         self.majority_id = None
         self.oversampler = oversampler
+        self.k_neighbors = k_neighbors
+        self.m_neighbors = m_neighbors
 
         # if given a restore_file, then finish loading a previously finetuned
         # model. Normally a user wouldn't do this directly. This is called from
@@ -248,7 +255,9 @@ class BaseBertEstimator(BaseEstimator):
                                num_mlp_hiddens=self.num_mlp_hiddens,
                                state_dict=state_dict,
                                local_rank=self.local_rank,
-                               oversampler=self.oversampler)
+                               oversampler=self.oversampler,
+                               k_neighbors=self.k_neighbors,
+                               m_neighbors=self.m_neighbors)
 
     def _validate_hyperparameters(self):
         """
