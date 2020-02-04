@@ -145,6 +145,9 @@ class BaseBertEstimator(BaseEstimator):
         path name for logfile
     ignore_label : list of strings
         Labels to be ignored when calculating f1 for token classifiers
+    oversampler : str
+        the algorithm to use to oversample examples of the minority class for unbalanced datasets.
+        Must be one of "SMOTE", "ADASYN", "BorderlineSmote", "KMeansSMOTE", "SVMSMOTE", with case not important.
     """
     def __init__(self, bert_model='bert-base-uncased',
                  bert_config_json=None, bert_vocab=None,
@@ -155,7 +158,7 @@ class BaseBertEstimator(BaseEstimator):
                  gradient_accumulation_steps=1, fp16=False, loss_scale=0,
                  local_rank=-1, use_cuda=True, random_state=42,
                  validation_fraction=0.1, logfile='bert_sklearn.log',
-                 ignore_label=None):
+                 ignore_label=None, oversampler=None):
 
         self.id2label, self.label2id = {}, {}
         self.input_text_pairs = None
@@ -186,6 +189,7 @@ class BaseBertEstimator(BaseEstimator):
         self.ignore_label = ignore_label
         self.majority_label = None
         self.majority_id = None
+        self.oversampler = oversampler
 
         # if given a restore_file, then finish loading a previously finetuned
         # model. Normally a user wouldn't do this directly. This is called from
@@ -243,7 +247,8 @@ class BaseBertEstimator(BaseEstimator):
                                num_mlp_layers=self.num_mlp_layers,
                                num_mlp_hiddens=self.num_mlp_hiddens,
                                state_dict=state_dict,
-                               local_rank=self.local_rank)
+                               local_rank=self.local_rank,
+                               oversampler=self.oversampler)
 
     def _validate_hyperparameters(self):
         """

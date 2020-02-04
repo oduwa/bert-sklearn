@@ -118,7 +118,7 @@ def finetune(model, X1, X2, y, config):
 
         for step, batch in enumerate(batch_iter):
             batch = tuple(t.to(device) for t in batch)
-            loss, _ = model(*batch)
+            loss, _ = model(*batch, is_train=True)
 
             loss = loss.mean()
 

@@ -12,6 +12,7 @@ setup(
     packages=find_packages(exclude=['test', 'scripts', 'examples']),
     install_requires=['torch>=0.4.1',
                        'scikit-learn',
+                       'imbalanced-learn',
                        'numpy',
                        'pandas',
                        'boto3',
