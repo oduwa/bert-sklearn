@@ -111,7 +111,7 @@ class BertPlusMLP(BertPreTrainedModel):
 
         self.apply(self.init_bert_weights)
 
-    def forward(self, input_ids, segment_ids=None, input_mask=None, labels=None, is_train=False):
+    def forward(self, input_ids, segment_ids=None, input_mask=None, labels=None, is_train=False, minority_class=1):
 
         hidden, pooled_output = self.bert(input_ids,
                                           segment_ids,
@@ -127,16 +127,18 @@ class BertPlusMLP(BertPreTrainedModel):
         if is_train and self.oversampler:
             output, labels = output.detach().numpy(), labels.detach().numpy()
 
-            # Count occurences of minority class and check if its too low for nearest neighbour oversampling.
-            # If it is too low, duplicate a minority class example.
+            # Count occurrences of minority class and check if its too low for nearest neighbour oversampling.
+            # If it is too low, duplicate a minority class example. If there happens to be no minority class in the
+            # batch, we cant oversample so do nothing.
             can_oversample = True
-            minority_class = 1
             minority_count = (labels == minority_class).sum()
             if minority_count <= self.k_neighbors or minority_count <= self.m_neighbors:
                 if len(np.where(labels == 1)[0]) > 0:
                     minority_index = np.where(labels == 1)[0][0]
-                    output = np.concatenate([output, np.tile(output[minority_index], (self.k_neighbors + 5, 1))], axis=0)
-                    labels = np.concatenate([labels, [labels[minority_index]] * (self.k_neighbors + 5)], axis=0)
+                    duplicate_minority_examples = np.tile(output[minority_index], (self.k_neighbors + 5, 1))
+                    duplicate_minority_labels = [labels[minority_index]] * (self.k_neighbors + 5)
+                    output = np.concatenate([output, duplicate_minority_examples], axis=0)
+                    labels = np.concatenate([labels, duplicate_minority_labels], axis=0)
                 else:
                     can_oversample = False
 
