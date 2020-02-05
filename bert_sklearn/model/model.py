@@ -95,7 +95,10 @@ class BertPlusMLP(BertPreTrainedModel):
         self.num_labels = num_labels
         self.num_mlp_layers = num_mlp_layers
         self.num_mlp_hiddens = num_mlp_hiddens
-        self.oversampler = self.__oversampler_for_str(oversampler.lower(), k_neighbors, m_neighbors)
+        if oversampler:
+            self.oversampler = self.__oversampler_for_str(oversampler.lower(), k_neighbors, m_neighbors)
+        else:
+            self.oversampler = None
         self.k_neighbors = k_neighbors
         self.m_neighbors = m_neighbors
 
