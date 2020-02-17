@@ -522,10 +522,8 @@ class BertClassifier(BaseBertEstimator, ClassifierMixin):
         device = config.device
 
         probs = []
-        sys.stdout.flush()
-        batch_iter = pbar(dataloader, desc="Predicting", leave=True)
 
-        for batch in batch_iter:
+        for batch in dataloader:
             batch = tuple(t.to(device) for t in batch)
             with torch.no_grad():
                 logits = self.model(*batch)
@@ -648,10 +646,7 @@ class BertTokenClassifier(BaseBertEstimator, ClassifierMixin):
         dataloader, config = self.setup_eval(texts_a, texts_b, labels=None)
         device = config.device
 
-        sys.stdout.flush()
-        batch_iter = pbar(dataloader, desc="Predicting", leave=True)
-
-        for batch in batch_iter:
+        for batch in dataloader:
             # get the token_starts mask from batch
             x1, x2, x3, token_starts_mask = batch
 
@@ -817,7 +812,7 @@ class BertTokenClassifier(BaseBertEstimator, ClassifierMixin):
         """
         tokens = self.basic_tokenizer.tokenize(text)
         tags = self.predict(np.array([tokens]))[0]
-        if verbose:                
+        if verbose:
             data = {"token": tokens, "predicted tags": tags}
             df = pd.DataFrame(data=data)
             if IN_COLAB:
