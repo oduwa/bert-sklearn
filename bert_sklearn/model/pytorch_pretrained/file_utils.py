@@ -243,11 +243,11 @@ def get_from_cache(url, cache_dir=None):
             # shutil.copyfileobj() starts at the current position, so go to the start
             temp_file.seek(0)
 
-            logger.info("copying %s to cache at %s", temp_file.name, cache_path)
+            #logger.info("copying %s to cache at %s", temp_file.name, cache_path)
             with open(cache_path, 'wb') as cache_file:
                 shutil.copyfileobj(temp_file, cache_file)
 
-            logger.info("creating metadata file for %s", cache_path)
+            #logger.info("creating metadata file for %s", cache_path)
             meta = {'url': url, 'etag': etag}
             meta_path = cache_path + '.json'
             with open(meta_path, 'w') as meta_file:
@@ -256,7 +256,7 @@ def get_from_cache(url, cache_dir=None):
                     output_string = unicode(output_string, 'utf-8')  # The beauty of python 2
                 meta_file.write(output_string)
 
-            logger.info("removing temp file %s", temp_file.name)
+            #logger.info("removing temp file %s", temp_file.name)
 
     return cache_path
 
@@ -286,8 +286,6 @@ def biobert_from_archive(archive_file, cache_dir, logger):
 
     # Extract archive to temp dir
     tempdir = tempfile.mkdtemp()
-    logger.info("extracting archive file {} to temp dir {}".format(
-        resolved_archive_file, tempdir))
 
     with tarfile.open(resolved_archive_file, 'r:gz') as archive:
         archive.extractall(tempdir)
@@ -315,8 +313,6 @@ def scibert_from_archive(archive_file, cache_dir, logger):
 
     # Extract archive to temp dir
     tempdir = tempfile.mkdtemp()
-    logger.info("extracting archive file {} to temp dir {}".format(
-        resolved_archive_file, tempdir))
     with tarfile.open(resolved_archive_file, 'r:tar') as archive:
         archive.extractall(tempdir)
 

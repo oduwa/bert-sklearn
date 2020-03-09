@@ -46,10 +46,7 @@ def get_model(bert_model='bert-base-uncased',
               num_mlp_layers=0,
               num_mlp_hiddens=500,
               state_dict=None,
-              local_rank=-1,
-              oversampler=None,
-              k_neighbors=2,
-              m_neighbors=3):
+              local_rank=-1):
     """
     Get a BertPlusMLP model.
 
@@ -71,9 +68,6 @@ def get_model(bert_model='bert-base-uncased',
          an optional state dictionnary
     local_rank : (int)
         local_rank for distributed training on gpus
-    oversampler : str
-        the algorithm to use to oversample examples of the minority class for unbalanced datasets.
-        Must be one of "SMOTE", "ADASYN", "BorderlineSmote", "KMeansSMOTE", "SVMSMOTE", with case not important.
 
     Returns
     -------
@@ -93,9 +87,7 @@ def get_model(bert_model='bert-base-uncased',
                                             num_labels=num_labels,
                                             model_type=model_type,
                                             num_mlp_hiddens=num_mlp_hiddens,
-                                            num_mlp_layers=num_mlp_layers,
-                                            oversampler=oversampler,
-                                            k_neighbors=k_neighbors, m_neighbors=m_neighbors)
+                                            num_mlp_layers=num_mlp_layers)
     else:
         # Load from pre-trained model archive
         print("Loading %s model..."%(bert_model))
@@ -105,8 +97,6 @@ def get_model(bert_model='bert-base-uncased',
                                             num_labels=num_labels,
                                             model_type=model_type,
                                             num_mlp_hiddens=num_mlp_hiddens,
-                                            num_mlp_layers=num_mlp_layers,
-                                            oversampler=oversampler,
-                                            k_neighbors=k_neighbors, m_neighbors=m_neighbors)
+                                            num_mlp_layers=num_mlp_layers)
 
     return model

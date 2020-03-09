@@ -14,7 +14,7 @@ Overall flow:
     # score model on holdout data
     model.score(X_dev, y_dev)
 
-    # predict model on new inputs
+    # (predict) model on new inputs
     model.predict(X_test)
 
 
@@ -58,7 +58,7 @@ from sklearn.exceptions import NotFittedError
 
 from .config import model2config
 from .data import get_test_dl
-from .data.utils import flatten
+from .data.utils import flatten, convert_text_to_features
 from .model import get_model
 from .model import get_tokenizer
 from .model import get_basic_tokenizer
@@ -145,14 +145,6 @@ class BaseBertEstimator(BaseEstimator):
         path name for logfile
     ignore_label : list of strings
         Labels to be ignored when calculating f1 for token classifiers
-    oversampler : str
-        the algorithm to use to oversample examples of the minority class for unbalanced datasets.
-        Must be one of "SMOTE", "ADASYN", "BorderlineSmote", "KMeansSMOTE", "SVMSMOTE", with case not important.
-    k_neighbors : int
-             number of nearest neighbours to used to construct synthetic samples
-    m_neighbors : int
-        number of nearest neighbours to used to construct synthetic samples.
-        Only used if oversampler == "BorderlineSMOTE" || SVMSMOTE
     """
     def __init__(self, bert_model='bert-base-uncased',
                  bert_config_json=None, bert_vocab=None,
@@ -163,7 +155,7 @@ class BaseBertEstimator(BaseEstimator):
                  gradient_accumulation_steps=1, fp16=False, loss_scale=0,
                  local_rank=-1, use_cuda=True, random_state=42,
                  validation_fraction=0.1, logfile='bert_sklearn.log',
-                 ignore_label=None, oversampler=None, minority_class=1, k_neighbors=2, m_neighbors=3):
+                 ignore_label=None):
 
         self.id2label, self.label2id = {}, {}
         self.input_text_pairs = None
@@ -194,10 +186,6 @@ class BaseBertEstimator(BaseEstimator):
         self.ignore_label = ignore_label
         self.majority_label = None
         self.majority_id = None
-        self.oversampler = oversampler
-        self.minority_class = minority_class
-        self.k_neighbors = k_neighbors
-        self.m_neighbors = m_neighbors
 
         # if given a restore_file, then finish loading a previously finetuned
         # model. Normally a user wouldn't do this directly. This is called from
@@ -221,7 +209,7 @@ class BaseBertEstimator(BaseEstimator):
             self.num_labels = 1
 
         self.logger = get_logger(logfile)
-        self.logger.info("Loading model:\n" + str(self))
+        #self.logger.info("Loading model:\n" + str(self))
 
     def load_tokenizer(self):
         """
@@ -255,10 +243,7 @@ class BaseBertEstimator(BaseEstimator):
                                num_mlp_layers=self.num_mlp_layers,
                                num_mlp_hiddens=self.num_mlp_hiddens,
                                state_dict=state_dict,
-                               local_rank=self.local_rank,
-                               oversampler=self.oversampler,
-                               k_neighbors=self.k_neighbors,
-                               m_neighbors=self.m_neighbors)
+                               local_rank=self.local_rank)
 
     def _validate_hyperparameters(self):
         """
@@ -471,7 +456,11 @@ class BaseBertEstimator(BaseEstimator):
         is a finetuned BertPlusMLP
         """
         print("Loading model from %s..."%(restore_file))
-        state = torch.load(restore_file)
+        state = None
+        if torch.cuda.is_available():
+            state = torch.load(restore_file)
+        else:
+            state = torch.load(restore_file, map_location='cpu')
 
         params = state['params']
         self.set_params(**params)
@@ -522,6 +511,7 @@ class BertClassifier(BaseBertEstimator, ClassifierMixin):
         device = config.device
 
         probs = []
+        sys.stdout.flush()
 
         for batch in dataloader:
             batch = tuple(t.to(device) for t in batch)
@@ -554,6 +544,44 @@ class BertClassifier(BaseBertEstimator, ClassifierMixin):
         y_pred = np.argmax(self.predict_proba(X), axis=1)
         y_pred = np.array([self.id2label[y] for y in y_pred])
         return y_pred
+
+    def prepare_message(self, message):
+        if not self.tokenizer:
+            self.load_tokenizer()
+        if type(message) is str:
+            feature = convert_text_to_features(message, None,
+                                               self.max_seq_length,
+                                               self.tokenizer)
+
+            input_ids = torch.tensor([feature.input_ids], dtype=torch.long)
+            input_mask = torch.tensor([feature.input_mask], dtype=torch.long)
+            segment_ids = torch.tensor([feature.segment_ids], dtype=torch.long)
+
+            return input_ids, input_mask, segment_ids
+        elif type(message) is list:
+            features = [convert_text_to_features(txt, None,
+                                               self.max_seq_length,
+                                               self.tokenizer) for txt in message]
+
+            input_ids = torch.tensor([feature.input_ids for feature in features], dtype=torch.long)
+            input_mask = torch.tensor([feature.input_mask for feature in features], dtype=torch.long)
+            segment_ids = torch.tensor([feature.segment_ids for feature in features], dtype=torch.long)
+
+            return input_ids, input_mask, segment_ids
+        else:
+            raise ValueError("Message argument must either be one string message, or a list of string messages.")
+
+    def bert(self, input_ids, input_mask, segment_ids):
+        self.model.eval()
+        with torch.no_grad():
+            logits = self.model(input_ids, input_mask, segment_ids)
+            return logits
+
+    def bert_embedding(self, message):
+        input_ids, input_mask, segment_ids = self.prepare_message(message)
+        with torch.no_grad():
+            embeds = self.model(input_ids, input_mask, segment_ids, apply_downstream=False)
+        return embeds
 
 
 class BertRegressor(BaseBertEstimator, RegressorMixin):
@@ -645,6 +673,8 @@ class BertTokenClassifier(BaseBertEstimator, ClassifierMixin):
         texts_a, texts_b = to_numpy(X), None
         dataloader, config = self.setup_eval(texts_a, texts_b, labels=None)
         device = config.device
+
+        sys.stdout.flush()
 
         for batch in dataloader:
             # get the token_starts mask from batch
@@ -847,3 +877,91 @@ def load_model(filename):
     model_ctor = classes[class_name]
     model = model_ctor(restore_file=filename)
     return model
+
+
+class LeanBert(BaseEstimator):
+
+    def __init__(self):
+        self.path = ""
+        self.bert_model = 'bert-base-uncased'
+        self.model = None
+        self.tokenizer = None
+        self.model_type = "text_classifier"
+        self.do_lower_case = True
+        self.bert_config_json = None
+        self.from_tf = False
+        self.num_labels = 2
+        self.num_mlp_layers = 0
+        self.num_mlp_hiddens = 500
+        self.id2label = None
+        self.label2id = None
+        self.max_seq_length = 64
+        self.local_rank = -1
+
+    def load_tokenizer(self):
+        """
+        Load Basic and BERT Wordpiece Tokenizers
+        """
+        # get basic tokenizer
+        self.basic_tokenizer = get_basic_tokenizer(self.do_lower_case)
+
+        # get bert wordpiece tokenizer
+        self.tokenizer = get_tokenizer(self.bert_model, self.bert_vocab, self.do_lower_case)
+
+        return self.tokenizer
+
+    def restore_model(self, restore_file):
+        """
+        Restore a previously finetuned model from a restore_file
+
+        This is called from the BertClassifier or BertRegressor. The saved model
+        is a finetuned BertPlusMLP
+        """
+        print("Loading model from %s..."%(restore_file))
+        state = None
+        if torch.cuda.is_available():
+            state = torch.load(restore_file)
+        else:
+            state = torch.load(restore_file, map_location='cpu')
+
+
+        params = state['params']
+        self.set_params(**params)
+
+        self.bert_config_json = state['bert_config_json']
+        self.bert_vocab = state['bert_vocab']
+        self.input_text_pairs = state['input_text_pairs']
+        self.id2label = state['id2label']
+        self.label2id = state['label2id']
+
+        # get tokenizer and model
+        self.load_tokenizer()
+
+        # load a vanilla bert model ready to finetune:
+        # pretrained bert LM + untrained classifier/regressor
+        self.model = get_model(bert_model=self.bert_model,
+                               bert_config_json=self.bert_config_json,
+                               from_tf=self.from_tf,
+                               num_labels=self.num_labels,
+                               model_type=self.model_type,
+                               num_mlp_layers=self.num_mlp_layers,
+                               num_mlp_hiddens=self.num_mlp_hiddens,
+                               state_dict=state['state_dict'],
+                               local_rank=self.local_rank)
+
+    def prepare_message(self, message):
+        feature = convert_text_to_features(message, None,
+                                           self.max_seq_length,
+                                           self.tokenizer)
+
+        input_ids = torch.tensor([feature.input_ids], dtype=torch.long)
+        input_mask = torch.tensor([feature.input_mask], dtype=torch.long)
+        segment_ids = torch.tensor([feature.segment_ids], dtype=torch.long)
+
+        return input_ids, input_mask, segment_ids
+
+    def bert(self, input_ids, input_mask, segment_ids):
+        self.model.eval()
+        with torch.no_grad():
+            logits = self.model(input_ids, input_mask, segment_ids)
+            return logits

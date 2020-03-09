@@ -154,9 +154,11 @@ class BertTokenizer(object):
     def tokenize(self, text):
         split_tokens = []
         if self.do_basic_tokenize:
-            for token in self.basic_tokenizer.tokenize(text):
-                for sub_token in self.wordpiece_tokenizer.tokenize(token):
-                    split_tokens.append(sub_token)
+            split_tokens = [sub_token for token in self.basic_tokenizer.tokenize(text) for sub_token in
+                            self.wordpiece_tokenizer.tokenize(token)]
+            # for token in self.basic_tokenizer.tokenize(text):
+            #     for sub_token in self.wordpiece_tokenizer.tokenize(token):
+            #         split_tokens.append(sub_token)
         else:
             split_tokens = self.wordpiece_tokenizer.tokenize(text)
         return split_tokens
@@ -250,11 +252,6 @@ class BertTokenizer(object):
                         ', '.join(PRETRAINED_VOCAB_ARCHIVE_MAP.keys()),
                         vocab_file))
             return None
-        if resolved_vocab_file == vocab_file:
-            logger.info("loading vocabulary file {}".format(vocab_file))
-        else:
-            logger.info("loading vocabulary file {} from cache at {}".format(
-                vocab_file, resolved_vocab_file))
         if pretrained_model_name_or_path in PRETRAINED_VOCAB_POSITIONAL_EMBEDDINGS_SIZE_MAP:
             # if we're using a pretrained model, ensure the tokenizer wont index sequences longer
             # than the number of positional embeddings

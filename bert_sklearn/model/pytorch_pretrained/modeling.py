@@ -738,11 +738,11 @@ class BertPreTrainedModel(nn.Module):
         elif isinstance(config_file_or_dict, dict):
             config = BertConfig.from_dict(config_file_or_dict)
 
-        logger.info("Model config {}".format(config))
+        #logger.info("Model config {}".format(config))
                       
         # Load config
         #config = BertConfig.from_json_file(config_path)
-        #logger.info("Model config {}".format(config))
+        ##logger.info("Model config {}".format(config))
         
         # Instantiate model.
         model = cls(config, *inputs, **kwargs)
@@ -854,14 +854,6 @@ def bert_from_archive(config_file, archive_file, cache_dir):
                     ', '.join(PRETRAINED_CONFIG_ARCHIVE_MAP.keys()),
                     config_file))
         return None
-    if resolved_archive_file == archive_file and resolved_config_file == config_file:
-        logger.info("loading weights file {}".format(archive_file))
-        logger.info("loading configuration file {}".format(config_file))
-    else:
-        logger.info("loading weights file {} from cache at {}".format(
-            archive_file, resolved_archive_file))
-        logger.info("loading configuration file {} from cache at {}".format(
-            config_file, resolved_config_file))
             
     return resolved_config_file, resolved_archive_file
 
