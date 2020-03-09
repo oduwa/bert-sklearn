@@ -97,9 +97,9 @@ class BertPlusMLP(BertPreTrainedModel):
             output = hidden
         else:
             output = pooled_output
-            output = self.dropout(output)
 
         if apply_downstream or labels is not None:
+            output = self.dropout(output)
             output = self.mlp(output)
 
         if labels is not None:
