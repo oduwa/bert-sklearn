@@ -93,14 +93,14 @@ class BertPlusMLP(BertPreTrainedModel):
                                           input_mask,
                                           output_all_encoded_layers=False)
 
+        if not apply_downstream:
+            return pooled_output
+
         if self.model_type == "token_classifier":
             output = hidden
         else:
             output = pooled_output
-
-        if apply_downstream or labels is not None:
             output = self.dropout(output)
-            output = self.mlp(output)
 
         if labels is not None:
             if self.model_type == "text_classifier":

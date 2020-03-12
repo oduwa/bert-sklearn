@@ -578,6 +578,7 @@ class BertClassifier(BaseBertEstimator, ClassifierMixin):
             return logits
 
     def bert_embedding(self, message):
+        self.model.eval()
         input_ids, input_mask, segment_ids = self.prepare_message(message)
         with torch.no_grad():
             embeds = self.model(input_ids, input_mask, segment_ids, apply_downstream=False)
