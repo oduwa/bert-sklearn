@@ -60,6 +60,10 @@ new_model = load_model(savefile)
 
 # do stuff with new model
 new_model.score(X_test, y_test)
+
+# BERT embeddings
+new_model.bert_embedding("a message to embed")
+new_model.bert_embedding(list_of_messages_to_embed)
 ```
 See [demo](https://github.com/charles9n/bert-sklearn/blob/master/demo.ipynb) notebook.
 
@@ -81,9 +85,6 @@ model.fit(X_train, y_train)
 # do stuff...
 model.score(X_test, y_test)
 
-# BERT embeddings
-model.bert_embedding("a message to embed")
-model.bert_embedding(list_of_messages_to_embed)
 ```
 See [options](https://github.com/charles9n/bert-sklearn/blob/master/Options.md)
 
