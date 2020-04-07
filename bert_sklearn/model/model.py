@@ -102,6 +102,8 @@ class BertPlusMLP(BertPreTrainedModel):
             output = pooled_output
             output = self.dropout(output)
 
+        output = self.mlp(output)
+
         if labels is not None:
             if self.model_type == "text_classifier":
                 loss_criterion = nn.CrossEntropyLoss(reduction='none')
