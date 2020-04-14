@@ -574,15 +574,22 @@ class BertClassifier(BaseBertEstimator, ClassifierMixin):
     def bert(self, input_ids, input_mask, segment_ids):
         self.model.eval()
         with torch.no_grad():
-            logits = self.model(input_ids, input_mask, segment_ids)
+            logits = self.model(input_ids, segment_ids, input_mask)
             return logits
 
     def bert_embedding(self, message):
         self.model.eval()
-        input_ids, input_mask, segment_ids = self.prepare_message(message)
-        with torch.no_grad():
-            embeds = self.model(input_ids, input_mask, segment_ids, apply_downstream=False)
-        return embeds
+        dataloader, config = self.setup_eval(message, None, labels=None)
+        device = config.device
+
+        embeds = []
+
+        for batch in dataloader:
+            batch = tuple(t.to(device) for t in batch)
+            with torch.no_grad():
+                vec = self.model(*batch, apply_downstream=False)
+            embeds.append(vec.detach().cpu().numpy())
+        return np.vstack(tuple(embeds))
 
 
 class BertRegressor(BaseBertEstimator, RegressorMixin):

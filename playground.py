@@ -15,8 +15,9 @@ def test_bert():
     model = BertClassifier()
     model.restore_finetuned_model("/Users/oduwaedoosagie/Desktop/berts/baby_bert/v2/baby_bert2.bin")
 
-    print(model.bert_embedding(["i like pie"])[0])
-    print(model.bert_embedding(["i like pie"])[0])
+    print(model.bert_embedding(["i like pie"]))
+    print(model.bert_embedding(["i like pie"]).shape)
+    #print(model.bert_embedding(["i like pie"])[0])
 
 
 def test_lean_bert():
@@ -38,6 +39,11 @@ def test_lean_bert():
     print(f"TIME TAKEN: {total}")
 
 test_bert()
+# X, y = data_from_df(pd.read_csv("~/Documents/OOA/v1.1/Data/train.csv")[:100])
+#
+# model = BertClassifier()
+# model.restore_finetuned_model("/Users/oduwaedoosagie/Desktop/berts/baby_bert/v2/baby_bert2.bin")
+# print(model.predict(["paypal is good"]))
 
 
 # from bert_sklearn.config import model2config
